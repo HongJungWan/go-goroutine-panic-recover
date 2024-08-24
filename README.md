@@ -53,6 +53,12 @@ Go에서 고루틴 내에서 panic이 발생하면, 이 panic은 고루틴을 �
 
 <br>
 
+```bash
+go get -u github.com/HongJungWan/go-goroutine-panic-recover/safego
+```
+
+<br>
+
 ```go
 import "github.com/HongJungWan/go-goroutine-panic-recover/safego"
 
