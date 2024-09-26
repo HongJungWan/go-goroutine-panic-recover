@@ -21,9 +21,7 @@ Go에서 고루틴 내에서 panic이 발생하면, 이 panic은 고루틴을 �
 
 safego 패키지는 고루틴 내에서 발생한 panic을 부모 함수로 안전하게 전달할 수 있는 방법을 제공합니다.
 
-<br>
-
-----
+<br><br>
 
 ## 핵심 동작 원리
 
@@ -39,9 +37,7 @@ safego 패키지는 고루틴 내에서 발생한 panic을 부모 함수로 안�
 
 <img src="docs/case.png" alt="case image" width="800"/>
 
-<br>
-
-----
+<br><br>
 
 ## safego 사용법
 * SafeGo 메서드는 새로운 고루틴을 시작하고, 고루틴 내에서 panic이 발생하면 이를 채널을 통해 수집합니다.
