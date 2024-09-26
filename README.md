@@ -1,87 +1,91 @@
-# go-goroutine-panic-recover
+# safego
 
 [![Go](https://img.shields.io/badge/Go-1.23-blue.svg)](https://golang.org)
+![Static Badge](https://img.shields.io/badge/release-v1.0.1-blue)
+
+![img.png](docs/logo.png)
+
+----
+
+Go에서 고루틴 내에서 panic이 발생하면, 이 panic은 고루틴을 생성한 부모 함수로 전파되지 않습니다.
+
+부모 함수에 recover 로직이 존재해도 고루틴 내에서 발생한 panic을 잡지 못하고 프로그램이 비정상적으로 종료됩니다.
+
+이러한 현상이 발생하는 이유는 고루틴 내에서 panic이 발생할 경우, panicking 상태가 부모 고루틴에 전파되지 않기 때문입니다. 이를 해결하기 위한 방법은 다음과 같습니다.
 
 <br>
 
-### 불편함 🤔
+각 고루틴마다 panic을 개별적으로 처리하고 적절히 복구하면 됩니다.
 
-Go에서 고루틴 내에서 panic이 발생하면, 이 panic은 고루틴을 생성한 부모 함수로 전파되지 않는다. 
+하지만, 고루틴마다 recover 로직을 구현하는 것은 번거롭습니다. 그래서 safego 패키지를 만들었습니다.
 
-부모 함수에 recover 로직이 존재해도 고루틴 내에서 발생한 panic을 잡지 못하고 프로그램이 비정상적으로 종료된다.
-
-위와 같은 현상이 발생하는 이유는 고루틴 내에서 panic이 발생할 경우 panicking 개념이 동작하지 않기 때문인데 해결 방법은 다음과 같다.
+safego 패키지는 고루틴 내에서 발생한 panic을 부모 함수로 안전하게 전달할 수 있는 방법을 제공합니다.
 
 <br>
 
-각 고루틴마다 panic을 개별적으로 처리하고 적절히 복구하면 된다. 
+----
 
-하지만, 고루틴마다 recover 로직을 구현하는 것은 매우 귀찮고 번거롭다. 아마 당신도 평소에 귀찮다고 느끼고 있었을 것이다.
+## 핵심 동작 원리
 
-그런 당신을 위해 `go-goroutine-panic-recover` 패키지를 만들었다.
+아래 다이어그램은 `safego.WaitGroup`의 핵심 동작 원리를 시각적으로 설명합니다.
 
-`go-goroutine-panic-recover` 패키지는 고루틴 내에서 발생한 panic을 부모 함수로 안전하게 전달할 수 있는 방법을 제공한다.
+* safego 패키지를 사용하면 panic 발생 시 WaitGroup과의 연동 문제를 안전하게 처리할 수 있습니다. 
 
-<br><br><br>
 
-### 해결 과정 📌
+* wg.Done() 호출 전후에 발생하는 panic 상황 모두에서 고루틴이 정상적으로 종료되도록 보장합니다.
 
-이 패키지는 Go의 표준 sync.WaitGroup을 확장하여, 고루틴 내에서 발생한 panic을 자동으로 복구하고, 이를 부모 함수로 전달한다. 
 
-<br>
+* 모든 고루틴이 종료될 때까지 기다리고, 발생한 panic을 한 번에 처리할 수 있습니다.
 
-| 주요 스펙           | 설명                                                                                                                              |
-|-----------------|---------------------------------------------------------------------------------------------------------------------------------|
-| **자동 Panic 복구** | `safego.WaitGroup`의 `Done()` 메서드는 고루틴 내에서 발생한 `panic`을 자동으로 복구하고, 에러 채널에 기록한.                                                   |
-| **에러 전파**       | `Wait()` 메서드는 고루틴에서 발생한 모든 `panic`을 집계하여, 부모 함수로 반환한다.                                                                          |
-| **동기화**         | `sync.Mutex`와 `sync/atomic`을 사용하여 고루틴 간의 동기화와 Race Condition 문제를 관리한다.                                                          |
-| **주의 사항**       | ‼ `Wait()` 메서드를 호출한 후에는 해당 `WaitGroup` 인스턴스를 재사용해서는 안 된다. <br> ‼ `Wait()` 메서드는 에러를 수신하기 위한 채널을 닫기 때문에, 재사용 시 `panic`이 발생할 수 있다. |
-
-<br><br><br>
-
-### 사용 방법 📌
-
-다음은 safego.WaitGroup을 사용하는 예제 코드다.
-
-아주 간단하다.
-
-| 예상 사용 시나리오                                                 |
-|------------------------------------------------------------|
-| 1. `safego.WaitGroup` 인스턴스를 생성하고, `panic`을 발생시키는 고루틴을 추가한다. |
-| 2. `Wait()` 메서드는 발생한 모든 `panic`을 집계하여 반환한다.                |
-| 3. `safego.WaitGroup`을 사용함으로써, 모든 고루틴이 안전하게 종료되고, 발생한 `panic`이 부모 함수로 전달한다. |
+<img src="docs/case.png" alt="case image" width="800"/>
 
 <br>
 
-```bash
-go get -u github.com/HongJungWan/go-goroutine-panic-recover/safego
-```
+----
+
+## safego 사용법
+* SafeGo 메서드는 새로운 고루틴을 시작하고, 고루틴 내에서 panic이 발생하면 이를 채널을 통해 수집합니다.
+* Wait 메서드는 모든 고루틴이 완료될 때까지 대기하고, 채널을 통해 수집된 모든 panic을 다시 panic으로 발생시킵니다.
+* 테스트 케이스는 panic 발생 여부에 따라 Wait 메서드의 동작을 검증합니다.
 
 <br>
 
 ```go
-import "github.com/HongJungWan/go-goroutine-panic-recover/safego"
+package safego
 
-func GoroutinePanicWithExample() {
-    defer func() {
-        if r := recover(); r != nil {
-            // 여기서 panic 복구 처리
-        }
-    }()
-    
-    var wg safego.WaitGroup
-    
-    wg.Add(1)
-    go func() {
-        defer wg.Done()
-        panic(safego.ErrPanicOccurred)
-    }()
-    
-    err := wg.Wait()
-    if err != nil {
-        fmt.Println("Error:", err)
-    }
+import (
+	"testing"
+
+	"github.com/stretchr/testify/assert"
+)
+
+func TestWaitGroup_NoError_Case(t *testing.T) {
+	// Given
+	as := assert.New(t)
+	var wg WaitGroup
+
+	// When
+	wg.SafeGo(func() {
+		// 정상적으로 실행되는 함수, 패닉 없음
+	})
+
+	// Then
+	as.NotPanics(wg.Wait)
+}
+
+func TestWaitGroup_WithPanic_Case(t *testing.T) {
+	// Given
+	as := assert.New(t)
+	var wg WaitGroup
+
+	// When
+	wg.SafeGo(func() {
+		panic("test panic") // 여기서 패닉 발생
+	})
+
+	// Then
+	as.Panics(wg.Wait) // Wait 호출 시 패닉이 발생하는지 테스트
 }
 ```
 
-<br><br>
+<br>

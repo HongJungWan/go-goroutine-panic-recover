@@ -6,43 +6,30 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestWaitGroup_NoError(t *testing.T) {
+func TestWaitGroup_NoError_Case(t *testing.T) {
 	// Given
 	as := assert.New(t)
-	var wg WaitGroupInterface = &WaitGroup{}
+	var wg WaitGroup
 
 	// When
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-	}()
+	wg.SafeGo(func() {
+		// Ex: 정상적으로 실행되는 함수, 패닉 없음
+	})
 
 	// Then
-	as.NoError(wg.Wait())
+	as.NotPanics(wg.Wait)
 }
 
-func TestWaitGroup_Errors(t *testing.T) {
+func TestWaitGroup_WithPanic_Case(t *testing.T) {
 	// Given
 	as := assert.New(t)
-	var wg WaitGroupInterface = &WaitGroup{}
+	var wg WaitGroup
 
 	// When
-	wg.Add(3)
-	go func() {
-		defer wg.Done()
-	}()
-
-	go func() {
-		defer wg.Done()
-		panic(ErrPanicOccurred) // panic 발생
-	}()
-
-	go func() {
-		defer wg.Done()
-		panic(ErrPanicOccurred) // panic 발생
-	}()
+	wg.SafeGo(func() {
+		panic("test panic") // Ex: 패닉 발생
+	})
 
 	// Then
-	err := wg.Wait()
-	as.EqualError(err, ErrMultipleErrorsOccurred)
+	as.Panics(wg.Wait) // Wait 호출 시 패닉이 발생하는지 테스트
 }
