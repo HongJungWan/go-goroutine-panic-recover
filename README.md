@@ -5,7 +5,9 @@
 
 ![img.png](docs/logo.png)
 
-----
+<br>
+
+## 📌 왜 만들었는가 ?
 
 Go에서 고루틴 내에서 panic이 발생하면, 이 panic은 고루틴을 생성한 부모 함수로 전파되지 않습니다.
 
@@ -23,7 +25,7 @@ safego 패키지는 고루틴 내에서 발생한 panic을 부모 함수로 안�
 
 <br><br>
 
-## 핵심 동작 원리
+## ⚙ 핵심 동작 원리
 
 아래 다이어그램은 `safego.WaitGroup`의 핵심 동작 원리를 시각적으로 설명합니다.
 
@@ -39,7 +41,7 @@ safego 패키지는 고루틴 내에서 발생한 panic을 부모 함수로 안�
 
 <br><br>
 
-## safego 사용법
+## 🚀 safego 사용법
 * SafeGo 메서드는 새로운 고루틴을 시작하고, 고루틴 내에서 panic이 발생하면 이를 채널을 통해 수집합니다.
 * Wait 메서드는 모든 고루틴이 완료될 때까지 대기하고, 채널을 통해 수집된 모든 panic을 다시 panic으로 발생시킵니다.
 * 테스트 케이스는 panic 발생 여부에 따라 Wait 메서드의 동작을 검증합니다.
@@ -83,5 +85,12 @@ func TestWaitGroup_WithPanic_Case(t *testing.T) {
 	as.Panics(wg.Wait) // Wait 호출 시 패닉이 발생하는지 테스트
 }
 ```
+
+<br><br>
+
+## ‼ 주의사항
+
+* `Done 메서드 직접 호출 금지`, SafeGo를 사용하는 고루틴 내에서는 wg.Done()을 직접 호출하지 않도록 주의하세요. 
+* SafeGo가 이를 자동으로 처리하기 때문에 중복 호출 시 WaitGroup 카운터가 잘못 관리될 수 있습니다.
 
 <br>
